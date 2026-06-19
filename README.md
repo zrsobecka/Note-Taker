@@ -1,6 +1,6 @@
 # Note Taker
 
-Note Taker is a local Windows project for turning copied or selected browser text into clean Obsidian Markdown notes.
+Note Taker is a local Windows project for turning browser content into clean Obsidian Markdown notes.
 
 The first module is Obsidian Note Taker:
 
@@ -9,9 +9,13 @@ The first module is Obsidian Note Taker:
 
 ## Flow
 
-1. Select text on a web page or copy text to the clipboard.
+1. Choose the source text mode in the Chrome extension:
+   - auto: selected text first, then clipboard;
+   - selected text only;
+   - clipboard only;
+   - full page text.
 2. Open the Obsidian Note Taker extension.
-3. Enter a note title and choose an Obsidian folder.
+3. Enter a note title, choose an Obsidian folder, choose the note language, and choose the LM Studio model.
 4. The extension sends the text to LM Studio running locally.
 5. The extension sends the generated Markdown to the Python native host.
 6. The Python host saves the note as a `.md` file in the selected Obsidian folder.
@@ -38,6 +42,8 @@ The Chrome popup shows an LLM status badge:
 - `LLM: connected, no loaded model` - the server responds, but no model is available.
 - `LLM: not connected` - LM Studio is not reachable from the extension.
 
+The model dropdown is populated from the LM Studio `/models` endpoint. The selected model is stored per queued note.
+
 ## Project Config
 
 Edit these files before using the project:
@@ -51,6 +57,8 @@ Edit these files before using the project:
   - folders hidden from the Chrome folder picker
 - `docs/note-generation-rules.md`
   - rules for Obsidian-friendly generated notes
+
+Local-only files are ignored by Git. Keep personal paths and Chrome extension IDs in local files, not in tracked examples.
 
 ## Load Chrome Extension
 
