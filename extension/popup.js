@@ -2,6 +2,7 @@ import { CONFIG } from "./config.js";
 
 const titleInput = document.querySelector("#titleInput");
 const folderInput = document.querySelector("#folderInput");
+const languageInput = document.querySelector("#languageInput");
 const saveButton = document.querySelector("#saveButton");
 const copyButton = document.querySelector("#copyButton");
 const resultBox = document.querySelector("#resultBox");
@@ -202,7 +203,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${job.message || ""}`;
+  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -234,6 +235,10 @@ function createJobElement(job) {
   item.append(actions);
 
   return item;
+}
+
+function getNoteLanguage(job) {
+  return job.noteLanguage || "polski";
 }
 
 function createJobButton(label, action, id, className) {
@@ -300,6 +305,7 @@ function openQueueMonitor() {
 saveButton.addEventListener("click", async () => {
   const title = titleInput.value.trim();
   const folder = folderInput.value;
+  const noteLanguage = languageInput.value || "polski";
 
   saveButton.disabled = true;
   saveButton.textContent = "Adding...";
@@ -336,6 +342,7 @@ saveButton.addEventListener("click", async () => {
       id: createJobId(),
       title,
       folder,
+      noteLanguage,
       sourceText,
       status: "queued",
       message: "Waiting for queue monitor.",

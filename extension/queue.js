@@ -150,7 +150,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${job.message || ""}`;
+  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -182,6 +182,10 @@ function createJobElement(job) {
   item.append(actions);
 
   return item;
+}
+
+function getNoteLanguage(job) {
+  return job.noteLanguage || "polski";
 }
 
 function createJobButton(label, action, id, className) {
@@ -264,7 +268,7 @@ async function runJob(job) {
     }));
     setMonitorStatus(`Generating: ${job.title}`);
 
-    const markdown = await generateMarkdown(job.title, job.sourceText, activeController.signal);
+    const markdown = await generateMarkdown(job.title, job.sourceText, getNoteLanguage(job), activeController.signal);
     await ensureJobStillActive(job.id);
 
     await updateStoredJob(job.id, (current) => ({
@@ -358,7 +362,7 @@ function stopHeartbeat() {
   heartbeatTimer = null;
 }
 
-async function generateMarkdown(title, sourceText, signal) {
+async function generateMarkdown(title, sourceText, noteLanguage, signal) {
   const response = await fetch(CONFIG.lmStudioUrl, {
     method: "POST",
     signal,
@@ -375,7 +379,7 @@ async function generateMarkdown(title, sourceText, signal) {
         },
         {
           role: "user",
-          content: buildUserPrompt(title, sourceText)
+          content: buildUserPrompt(title, sourceText, noteLanguage)
         }
       ]
     })
@@ -428,7 +432,7 @@ function buildSystemPrompt() {
     "Jesteś ekspertem od tworzenia notatek do Obsidiana. Bardzo ci zależy żeby wytłumaczyć temat jak najlepiej.",
     "Twoim zadaniem NIE jest streszczenie tekstu.",
     "Masz zamienić materiał źródłowy w praktyczną notatkę edukacyjną, która pomaga zrozumieć temat i wykorzystać go później.",
-    "Pisz po polsku.",
+    "Dostosuj język notatki do wybranego języka w rozszerzeniu dla tej konkretnej notatki.",
     "Nie kopiuj zdań z materiału.",
     "Nie twórz streszczenia rozdział po rozdziale.",
     "Łącz podobne informacje.",
@@ -445,9 +449,10 @@ function buildSystemPrompt() {
   ].join("\n");
 }
 
-function buildUserPrompt(title, sourceText) {
+function buildUserPrompt(title, sourceText, noteLanguage) {
   return [
     `Title: ${title}`,
+    `Wybrany język notatki: ${noteLanguage || "polski"}`,
     "",
     "Użyj tej struktury Markdown:",
     "",

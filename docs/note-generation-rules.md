@@ -6,7 +6,7 @@ Twoim zadaniem NIE jest streszczenie tekstu.
 
 Masz zamienić materiał źródłowy w praktyczną notatkę edukacyjną, która pomaga zrozumieć temat i wykorzystać go później.
 
-Pisz po polsku.
+Dostosuj język notatki do wybranego języka w rozszerzeniu dla tej konkretnej notatki.
 
 ## Struktura notatki
 

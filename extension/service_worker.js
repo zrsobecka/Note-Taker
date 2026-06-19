@@ -58,8 +58,8 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-async function generateAndSaveNote({ title, folder, sourceText }) {
-  const markdown = await generateMarkdown(title, sourceText);
+async function generateAndSaveNote({ title, folder, sourceText, noteLanguage }) {
+  const markdown = await generateMarkdown(title, sourceText, noteLanguage || "polski");
   const saved = await saveMarkdown(title, folder, markdown);
 
   return {
@@ -103,6 +103,7 @@ function startNoteJob(port, jobs, jobInput) {
     id: jobInput.id,
     title: jobInput.title,
     folder: jobInput.folder,
+    noteLanguage: jobInput.noteLanguage || "polski",
     sourceText: jobInput.sourceText,
     status: "queued",
     message: "Waiting to start.",
@@ -137,7 +138,7 @@ function processNextJob(port, jobs) {
 async function runNoteJob(port, jobs, job) {
   try {
     setJobStatus(port, jobs, job.id, "generating", "Generating note with LM Studio.");
-    const markdown = await generateMarkdown(job.title, job.sourceText, job.controller.signal);
+    const markdown = await generateMarkdown(job.title, job.sourceText, getNoteLanguage(job), job.controller.signal);
 
     if (!jobs.has(job.id) || job.controller.signal.aborted) {
       throw new DOMException("Note generation was stopped.", "AbortError");
@@ -298,6 +299,7 @@ function toStoredJob(job) {
     id: job.id,
     title: job.title,
     folder: job.folder,
+    noteLanguage: getNoteLanguage(job),
     sourceText: TERMINAL_STATUSES.has(job.status) ? "" : job.sourceText,
     status: job.status,
     message: job.message,
@@ -314,6 +316,7 @@ function toJobResponse(job) {
     id: job.id,
     title: job.title,
     folder: job.folder,
+    noteLanguage: getNoteLanguage(job),
     status: job.status,
     message: job.message,
     path: job.path,
@@ -347,7 +350,7 @@ async function checkLlmStatus() {
   };
 }
 
-async function generateMarkdown(title, sourceText, signal) {
+async function generateMarkdown(title, sourceText, noteLanguage, signal) {
   const response = await fetch(CONFIG.lmStudioUrl, {
     method: "POST",
     signal,
@@ -364,7 +367,7 @@ async function generateMarkdown(title, sourceText, signal) {
         },
         {
           role: "user",
-          content: buildUserPrompt(title, sourceText)
+          content: buildUserPrompt(title, sourceText, noteLanguage)
         }
       ]
     })
@@ -393,7 +396,7 @@ function buildSystemPrompt() {
     "Jesteś ekspertem od tworzenia notatek do Obsidiana. Bardzo ci zależy żeby wytłumaczyć temat jak najlepiej.",
     "Twoim zadaniem NIE jest streszczenie tekstu.",
     "Masz zamienić materiał źródłowy w praktyczną notatkę edukacyjną, która pomaga zrozumieć temat i wykorzystać go później.",
-    "Pisz po polsku.",
+    "Dostosuj język notatki do wybranego języka w rozszerzeniu dla tej konkretnej notatki.",
     "Nie kopiuj zdań z materiału.",
     "Nie twórz streszczenia rozdział po rozdziale.",
     "Łącz podobne informacje.",
@@ -410,9 +413,10 @@ function buildSystemPrompt() {
   ].join("\n");
 }
 
-function buildUserPrompt(title, sourceText) {
+function buildUserPrompt(title, sourceText, noteLanguage) {
   return [
     `Title: ${title}`,
+    `Wybrany język notatki: ${noteLanguage || "polski"}`,
     "",
     "Użyj tej struktury Markdown:",
     "",
@@ -467,6 +471,10 @@ function buildUserPrompt(title, sourceText) {
     "Source text:",
     sourceText
   ].join("\n");
+}
+
+function getNoteLanguage(job) {
+  return job.noteLanguage || "polski";
 }
 
 function normalizeMarkdownTitle(markdown, title) {
