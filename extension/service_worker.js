@@ -58,8 +58,13 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-async function generateAndSaveNote({ title, folder, sourceText, noteLanguage }) {
-  const markdown = await generateMarkdown(title, sourceText, noteLanguage || "polski");
+async function generateAndSaveNote({ title, folder, sourceText, noteLanguage, noteModel }) {
+  const markdown = await generateMarkdown(
+    title,
+    sourceText,
+    noteLanguage || "polski",
+    noteModel || CONFIG.lmStudioModel
+  );
   const saved = await saveMarkdown(title, folder, markdown);
 
   return {
@@ -104,6 +109,7 @@ function startNoteJob(port, jobs, jobInput) {
     title: jobInput.title,
     folder: jobInput.folder,
     noteLanguage: jobInput.noteLanguage || "polski",
+    noteModel: jobInput.noteModel || CONFIG.lmStudioModel,
     sourceText: jobInput.sourceText,
     status: "queued",
     message: "Waiting to start.",
@@ -138,7 +144,13 @@ function processNextJob(port, jobs) {
 async function runNoteJob(port, jobs, job) {
   try {
     setJobStatus(port, jobs, job.id, "generating", "Generating note with LM Studio.");
-    const markdown = await generateMarkdown(job.title, job.sourceText, getNoteLanguage(job), job.controller.signal);
+    const markdown = await generateMarkdown(
+      job.title,
+      job.sourceText,
+      getNoteLanguage(job),
+      getNoteModel(job),
+      job.controller.signal
+    );
 
     if (!jobs.has(job.id) || job.controller.signal.aborted) {
       throw new DOMException("Note generation was stopped.", "AbortError");
@@ -300,6 +312,7 @@ function toStoredJob(job) {
     title: job.title,
     folder: job.folder,
     noteLanguage: getNoteLanguage(job),
+    noteModel: getNoteModel(job),
     sourceText: TERMINAL_STATUSES.has(job.status) ? "" : job.sourceText,
     status: job.status,
     message: job.message,
@@ -317,6 +330,7 @@ function toJobResponse(job) {
     title: job.title,
     folder: job.folder,
     noteLanguage: getNoteLanguage(job),
+    noteModel: getNoteModel(job),
     status: job.status,
     message: job.message,
     path: job.path,
@@ -350,7 +364,7 @@ async function checkLlmStatus() {
   };
 }
 
-async function generateMarkdown(title, sourceText, noteLanguage, signal) {
+async function generateMarkdown(title, sourceText, noteLanguage, noteModel, signal) {
   const response = await fetch(CONFIG.lmStudioUrl, {
     method: "POST",
     signal,
@@ -358,7 +372,7 @@ async function generateMarkdown(title, sourceText, noteLanguage, signal) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: CONFIG.lmStudioModel,
+      model: noteModel || CONFIG.lmStudioModel,
       temperature: 0.3,
       messages: [
         {
@@ -475,6 +489,10 @@ function buildUserPrompt(title, sourceText, noteLanguage) {
 
 function getNoteLanguage(job) {
   return job.noteLanguage || "polski";
+}
+
+function getNoteModel(job) {
+  return job.noteModel || CONFIG.lmStudioModel;
 }
 
 function normalizeMarkdownTitle(markdown, title) {

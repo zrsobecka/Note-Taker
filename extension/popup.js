@@ -3,6 +3,7 @@ import { CONFIG } from "./config.js";
 const titleInput = document.querySelector("#titleInput");
 const folderInput = document.querySelector("#folderInput");
 const languageInput = document.querySelector("#languageInput");
+const modelInput = document.querySelector("#modelInput");
 const saveButton = document.querySelector("#saveButton");
 const copyButton = document.querySelector("#copyButton");
 const resultBox = document.querySelector("#resultBox");
@@ -88,12 +89,30 @@ async function checkLlmStatus() {
 
     if (!response.loaded) {
       setLlmStatus("LLM: connected, no loaded model", "statusChecking");
+      fillModelOptions(response.models || []);
       return;
     }
 
+    fillModelOptions(response.models || [], response.modelName);
     setLlmStatus(`LLM: ready - ${response.modelName}`, "statusReady");
   } catch (error) {
+    fillModelOptions([]);
     setLlmStatus(`LLM: not connected - ${error.message}`, "statusError");
+  }
+}
+
+function fillModelOptions(models, selectedModel = CONFIG.lmStudioModel) {
+  modelInput.textContent = "";
+
+  const uniqueModels = Array.from(new Set(models || []));
+  const modelOptions = uniqueModels.length ? uniqueModels : [CONFIG.lmStudioModel];
+
+  for (const model of modelOptions) {
+    const option = document.createElement("option");
+    option.value = model;
+    option.textContent = model;
+    option.selected = model === selectedModel;
+    modelInput.append(option);
   }
 }
 
@@ -203,7 +222,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${job.message || ""}`;
+  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -239,6 +258,10 @@ function createJobElement(job) {
 
 function getNoteLanguage(job) {
   return job.noteLanguage || "polski";
+}
+
+function getNoteModel(job) {
+  return job.noteModel || CONFIG.lmStudioModel;
 }
 
 function createJobButton(label, action, id, className) {
@@ -306,6 +329,7 @@ saveButton.addEventListener("click", async () => {
   const title = titleInput.value.trim();
   const folder = folderInput.value;
   const noteLanguage = languageInput.value || "polski";
+  const noteModel = modelInput.value || CONFIG.lmStudioModel;
 
   saveButton.disabled = true;
   saveButton.textContent = "Adding...";
@@ -343,6 +367,7 @@ saveButton.addEventListener("click", async () => {
       title,
       folder,
       noteLanguage,
+      noteModel,
       sourceText,
       status: "queued",
       message: "Waiting for queue monitor.",

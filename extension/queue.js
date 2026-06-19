@@ -150,7 +150,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${job.message || ""}`;
+  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -186,6 +186,10 @@ function createJobElement(job) {
 
 function getNoteLanguage(job) {
   return job.noteLanguage || "polski";
+}
+
+function getNoteModel(job) {
+  return job.noteModel || CONFIG.lmStudioModel;
 }
 
 function createJobButton(label, action, id, className) {
@@ -268,7 +272,13 @@ async function runJob(job) {
     }));
     setMonitorStatus(`Generating: ${job.title}`);
 
-    const markdown = await generateMarkdown(job.title, job.sourceText, getNoteLanguage(job), activeController.signal);
+    const markdown = await generateMarkdown(
+      job.title,
+      job.sourceText,
+      getNoteLanguage(job),
+      getNoteModel(job),
+      activeController.signal
+    );
     await ensureJobStillActive(job.id);
 
     await updateStoredJob(job.id, (current) => ({
@@ -362,7 +372,7 @@ function stopHeartbeat() {
   heartbeatTimer = null;
 }
 
-async function generateMarkdown(title, sourceText, noteLanguage, signal) {
+async function generateMarkdown(title, sourceText, noteLanguage, noteModel, signal) {
   const response = await fetch(CONFIG.lmStudioUrl, {
     method: "POST",
     signal,
@@ -370,7 +380,7 @@ async function generateMarkdown(title, sourceText, noteLanguage, signal) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: CONFIG.lmStudioModel,
+      model: noteModel || CONFIG.lmStudioModel,
       temperature: 0.3,
       messages: [
         {
