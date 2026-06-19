@@ -70,6 +70,8 @@ Podaj konkretne przykłady zastosowania.
 
 - Nie kopiuj zdań z materiału.
 - Nie twórz streszczenia rozdział po rozdziale.
+- Ignoruj śmieci ze strony, które nie są wiedzą: menu, nawigację, przyciski, etykiety UI, stopki, bannery, reklamy, komunikaty cookies, formularze, linki typu "next/previous", liczniki, komentarze techniczne strony i powtarzalne elementy layoutu.
+- Nie uwzględniaj w notatce treści, która jest tylko częścią interfejsu strony, a nie częścią materiału edukacyjnego.
 - Łącz podobne informacje.
 - Wyjaśniaj mechanizmy.
 - Pisz jak mentor tłumaczący temat inteligentnej osobie.

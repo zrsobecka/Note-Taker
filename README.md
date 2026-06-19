@@ -46,7 +46,7 @@ Edit these files before using the project:
   - LM Studio URL
   - model name
   - native host name
-- `native-host/config.json`
+- copy `native-host/config.example.json` to `native-host/config.json`
   - Obsidian vault path
   - folders hidden from the Chrome folder picker
 - `docs/note-generation-rules.md`
@@ -58,11 +58,7 @@ Edit these files before using the project:
 2. Go to `chrome://extensions`.
 3. Enable Developer mode.
 4. Click Load unpacked.
-5. Select:
-
-```text
-C:\Users\zusob\Dropbox\Note Taker\extension
-```
+5. Select the `extension/` folder from your local project checkout.
 
 6. Copy the extension ID shown by Chrome.
 
@@ -71,7 +67,7 @@ C:\Users\zusob\Dropbox\Note Taker\extension
 From PowerShell, replace `YOUR_EXTENSION_ID` with the ID copied from Chrome:
 
 ```powershell
-cd "C:\Users\zusob\Dropbox\Note Taker\native-host"
+cd "C:\Path\To\Note Taker\native-host"
 python install_native_host.py --extension-id YOUR_EXTENSION_ID
 ```
 
@@ -79,10 +75,10 @@ This registers the native messaging host for Chrome and allows this extension to
 
 ## Obsidian Vault
 
-Before saving real notes, edit:
+Before saving real notes, copy the example config and edit your local file:
 
 ```text
-C:\Users\zusob\Dropbox\Note Taker\native-host\config.json
+native-host\config.json
 ```
 
 Set `vault_path` to your Obsidian vault path.

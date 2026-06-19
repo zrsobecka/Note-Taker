@@ -9,6 +9,7 @@ const copyButton = document.querySelector("#copyButton");
 const resultBox = document.querySelector("#resultBox");
 const resultText = document.querySelector("#resultText");
 const sourceStatus = document.querySelector("#sourceStatus");
+const sourceModeInput = document.querySelector("#sourceModeInput");
 const llmStatus = document.querySelector("#llmStatus");
 const clearFinishedButton = document.querySelector("#clearFinishedButton");
 const openMonitorButton = document.querySelector("#openMonitorButton");
@@ -60,6 +61,28 @@ async function getClipboardText() {
   try {
     return (await navigator.clipboard.readText()).trim();
   } catch {
+    return "";
+  }
+}
+
+async function getPageText() {
+  const tab = await getActiveTab();
+  if (!tab?.id) {
+    return "";
+  }
+
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const title = document.title ? `${document.title}\n\n` : "";
+        return `${title}${document.body?.innerText || ""}`;
+      }
+    });
+
+    return result?.result?.trim() || "";
+  } catch (error) {
+    console.warn("Could not read full page text.", error);
     return "";
   }
 }
@@ -150,9 +173,23 @@ async function loadFolders() {
   }
 }
 
-async function loadSourceText() {
-  const selected = await getSelectedText();
-  const clipboard = selected ? "" : await getClipboardText();
+async function loadSourceText(sourceMode = sourceModeInput.value || "auto") {
+  if (sourceMode === "page") {
+    const pageText = await getPageText();
+    sourceText = pageText.slice(0, CONFIG.maxSourceCharacters);
+
+    if (pageText) {
+      const clipped = pageText.length > sourceText.length ? `, clipped to ${sourceText.length}` : "";
+      setStatus(`Using full page text (${pageText.length} characters${clipped}).`);
+      return;
+    }
+
+    setStatus("No readable page text found. Try selected text or clipboard instead.");
+    return;
+  }
+
+  const selected = sourceMode !== "clipboard" ? await getSelectedText() : "";
+  const clipboard = sourceMode !== "selection" && !selected ? await getClipboardText() : "";
   sourceText = (selected || clipboard).slice(0, CONFIG.maxSourceCharacters);
 
   if (selected) {
@@ -165,7 +202,17 @@ async function loadSourceText() {
     return;
   }
 
-  setStatus("No selected or copied text found. If the page blocks selection access, copy the text and try again.");
+  if (sourceMode === "selection") {
+    setStatus("No selected text found. Select text on the page and try again.");
+    return;
+  }
+
+  if (sourceMode === "clipboard") {
+    setStatus("No copied text found. Copy text and try again.");
+    return;
+  }
+
+  setStatus("No selected or copied text found. Copy the text if the selection disappears, then try again.");
 }
 
 async function sendToServiceWorker(message) {
@@ -334,7 +381,7 @@ saveButton.addEventListener("click", async () => {
   saveButton.disabled = true;
   saveButton.textContent = "Adding...";
 
-  await loadSourceText();
+  await loadSourceText(sourceModeInput.value);
 
   if (!sourceText) {
     showResult("Select text on the page or copy text first.");
@@ -439,6 +486,10 @@ clearFinishedButton.addEventListener("click", () => {
 
 openMonitorButton.addEventListener("click", () => {
   openQueueMonitor();
+});
+
+sourceModeInput.addEventListener("change", () => {
+  loadSourceText(sourceModeInput.value);
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {

@@ -7,6 +7,7 @@ from pathlib import Path
 HOST_NAME = "com.note_taker.chrome_note_clipper"
 BASE_DIR = Path(__file__).resolve().parent
 MANIFEST_PATH = BASE_DIR / "chrome_note_clipper_host.json"
+MANIFEST_EXAMPLE_PATH = BASE_DIR / "chrome_note_clipper_host.example.json"
 REGISTRY_KEY = rf"Software\Google\Chrome\NativeMessagingHosts\{HOST_NAME}"
 
 
@@ -23,6 +24,12 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if not MANIFEST_PATH.exists():
+        MANIFEST_PATH.write_text(
+            MANIFEST_EXAMPLE_PATH.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     manifest["path"] = str((BASE_DIR / "chrome_note_clipper_host.bat").resolve())
 

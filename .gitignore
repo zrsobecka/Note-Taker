@@ -3,3 +3,5 @@ __pycache__/
 .venv/
 .env
 native-host/native-host.log
+native-host/config.json
+native-host/chrome_note_clipper_host.json
