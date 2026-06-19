@@ -26,7 +26,19 @@
         </select>
       </label>
 
-      <button id="saveButton" type="button">Generate note</button>
+      <button id="saveButton" type="button">Add to queue</button>
+
+      <section class="queue" aria-labelledby="queueTitle">
+        <div class="queueHeader">
+          <h2 id="queueTitle">Note queue</h2>
+          <div class="queueHeaderActions">
+            <button id="openMonitorButton" class="secondaryButton" type="button">Open monitor</button>
+            <button id="clearFinishedButton" class="secondaryButton" type="button">Clear done</button>
+          </div>
+        </div>
+        <div id="queueEmpty" class="emptyQueue">No notes running.</div>
+        <div id="queueList" class="queueList"></div>
+      </section>
 
       <section id="resultBox" class="result" hidden>
         <div class="resultHeader">

@@ -1,0 +1,12 @@
+.queueShell {
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.queueMonitorList {
+  max-height: calc(100vh - 180px);
+}
+
+#monitorStatus {
+  max-width: 62ch;
+}

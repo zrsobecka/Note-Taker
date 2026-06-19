@@ -27,7 +27,8 @@
     "activeTab",
     "clipboardRead",
     "nativeMessaging",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "host_permissions": [
     "http://localhost:1234/*",

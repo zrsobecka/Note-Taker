@@ -20,7 +20,7 @@
 
 body {
   margin: 0;
-  min-width: 370px;
+  min-width: 430px;
   background: var(--bg);
   color: var(--text);
 }
@@ -140,6 +140,155 @@ button:disabled {
   border-color: var(--border);
   color: var(--subtle);
   cursor: wait;
+}
+
+.secondaryButton,
+.dangerButton {
+  min-height: 30px;
+  padding: 4px 10px;
+  border-color: var(--border-strong);
+  background: var(--panel-strong);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow: none;
+}
+
+.secondaryButton:hover {
+  background: #2b2638;
+}
+
+.dangerButton {
+  border-color: rgba(251, 113, 133, 0.52);
+  background: rgba(251, 113, 133, 0.14);
+  color: #fecdd3;
+}
+
+.dangerButton:hover {
+  background: rgba(251, 113, 133, 0.25);
+}
+
+.queue {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.queueHeader,
+.jobHeader,
+.jobActions {
+  display: flex;
+  align-items: center;
+}
+
+.queueHeader,
+.jobHeader {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.queueHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.emptyQueue {
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.queueList {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.jobItem {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+
+.jobTitle {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 840;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.jobMeta,
+.jobPath,
+.jobError {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.jobError {
+  color: #fecdd3;
+}
+
+.jobStatus {
+  flex: 0 0 auto;
+  min-width: 78px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.jobStatusGenerating,
+.jobStatusSaving,
+.jobStatusQueued,
+.jobStatusCancelling {
+  border-color: rgba(251, 191, 36, 0.42);
+  background: rgba(251, 191, 36, 0.13);
+  color: #fde68a;
+}
+
+.jobStatusSaved {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.12);
+  color: #a7f3d0;
+}
+
+.jobStatusError,
+.jobStatusCancelled {
+  border-color: rgba(251, 113, 133, 0.42);
+  background: rgba(251, 113, 133, 0.13);
+  color: #fecdd3;
+}
+
+.jobActions {
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
 }
 
 .result {

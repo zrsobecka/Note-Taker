@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Note Queue Monitor</title>
+    <link rel="stylesheet" href="popup.css">
+    <link rel="stylesheet" href="queue.css">
+  </head>
+  <body>
+    <main class="shell queueShell">
+      <header>
+        <h1>Note Queue Monitor</h1>
+        <div id="llmStatus" class="statusBadge statusChecking">LLM: checking...</div>
+        <p id="monitorStatus">Keep this window open while notes are generating.</p>
+      </header>
+
+      <section class="queue" aria-labelledby="queueTitle">
+        <div class="queueHeader">
+          <h2 id="queueTitle">Note queue</h2>
+          <button id="clearFinishedButton" class="secondaryButton" type="button">Clear done</button>
+        </div>
+        <div id="queueEmpty" class="emptyQueue">No notes queued.</div>
+        <div id="queueList" class="queueList queueMonitorList"></div>
+      </section>
+    </main>
+
+    <script type="module" src="queue.js"></script>
+  </body>
+</html>

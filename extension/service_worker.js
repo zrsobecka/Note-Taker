@@ -1,5 +1,14 @@
 import { CONFIG } from "./config.js";
 
+const TERMINAL_STATUSES = new Set(["saved", "error", "cancelled"]);
+const RESUMABLE_STATUSES = new Set(["queued", "generating", "saving", "cancelling"]);
+const JOB_STORAGE_KEY = "noteJobs";
+const noteJobs = new Map();
+const noteJobPorts = new Set();
+let activeJobId = null;
+let jobsLoaded = false;
+const jobsLoadedPromise = restoreStoredJobs();
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.action === "checkLlmStatus") {
     checkLlmStatus()
@@ -28,6 +37,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true;
 });
 
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "noteJobs") {
+    return;
+  }
+
+  noteJobPorts.add(port);
+
+  port.onMessage.addListener((message) => {
+    handleJobPortMessage(port, message);
+  });
+
+  port.onDisconnect.addListener(() => {
+    noteJobPorts.delete(port);
+  });
+
+  jobsLoadedPromise.then(() => {
+    postJobs(port, noteJobs);
+    processNextJob(port, noteJobs);
+  });
+});
+
 async function generateAndSaveNote({ title, folder, sourceText }) {
   const markdown = await generateMarkdown(title, sourceText);
   const saved = await saveMarkdown(title, folder, markdown);
@@ -36,6 +66,261 @@ async function generateAndSaveNote({ title, folder, sourceText }) {
     ok: true,
     markdown,
     path: saved.path
+  };
+}
+
+async function handleJobPortMessage(port, message) {
+  await jobsLoadedPromise;
+
+  if (message?.action === "startNoteJob") {
+    startNoteJob(port, noteJobs, message.job);
+    return;
+  }
+
+  if (message?.action === "cancelNoteJob") {
+    cancelNoteJob(port, noteJobs, message.id);
+    return;
+  }
+
+  if (message?.action === "removeNoteJob") {
+    removeNoteJob(port, noteJobs, message.id);
+    return;
+  }
+
+  if (message?.action === "clearFinishedNoteJobs") {
+    clearFinishedNoteJobs(port, noteJobs);
+    return;
+  }
+
+  if (message?.action === "listNoteJobs") {
+    postJobs(port, noteJobs);
+    processNextJob(port, noteJobs);
+  }
+}
+
+function startNoteJob(port, jobs, jobInput) {
+  const job = {
+    id: jobInput.id,
+    title: jobInput.title,
+    folder: jobInput.folder,
+    sourceText: jobInput.sourceText,
+    status: "queued",
+    message: "Waiting to start.",
+    path: "",
+    markdown: "",
+    error: "",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    cancelled: false,
+    controller: new AbortController()
+  };
+
+  jobs.set(job.id, job);
+  syncJobs(port, jobs);
+  processNextJob(port, jobs);
+}
+
+function processNextJob(port, jobs) {
+  if (activeJobId) {
+    return;
+  }
+
+  const nextJob = Array.from(jobs.values()).find((job) => job.status === "queued");
+  if (!nextJob) {
+    return;
+  }
+
+  activeJobId = nextJob.id;
+  runNoteJob(port, jobs, nextJob);
+}
+
+async function runNoteJob(port, jobs, job) {
+  try {
+    setJobStatus(port, jobs, job.id, "generating", "Generating note with LM Studio.");
+    const markdown = await generateMarkdown(job.title, job.sourceText, job.controller.signal);
+
+    if (!jobs.has(job.id) || job.controller.signal.aborted) {
+      throw new DOMException("Note generation was stopped.", "AbortError");
+    }
+
+    setJobStatus(port, jobs, job.id, "saving", "Saving note to Obsidian.");
+    const saved = await saveMarkdown(job.title, job.folder, markdown);
+
+    setJobStatus(port, jobs, job.id, "saved", "Saved to Obsidian.", {
+      markdown,
+      path: saved.path
+    });
+  } catch (error) {
+    if (!jobs.has(job.id)) {
+      return;
+    }
+
+    if (job.cancelled || error.name === "AbortError") {
+      setJobStatus(port, jobs, job.id, "cancelled", "Stopped before saving.");
+      return;
+    }
+
+    setJobStatus(port, jobs, job.id, "error", "Could not create this note.", {
+      error: error.message || String(error)
+    });
+  } finally {
+    const currentJob = jobs.get(job.id);
+    if (currentJob) {
+      currentJob.controller = null;
+      postJobs(port, jobs);
+    }
+
+    if (activeJobId === job.id) {
+      activeJobId = null;
+      processNextJob(port, jobs);
+    }
+  }
+}
+
+function cancelNoteJob(port, jobs, id) {
+  const job = jobs.get(id);
+  if (!job || TERMINAL_STATUSES.has(job.status)) {
+    return;
+  }
+
+  if (job.status === "queued") {
+    job.cancelled = true;
+    job.controller?.abort();
+    setJobStatus(port, jobs, id, "cancelled", "Stopped before starting.");
+    processNextJob(port, jobs);
+    return;
+  }
+
+  if (job.status === "saving") {
+    setJobStatus(port, jobs, id, "saving", "Already saving to Obsidian.");
+    return;
+  }
+
+  job.cancelled = true;
+  job.controller?.abort();
+  setJobStatus(port, jobs, id, "cancelling", "Stopping this note.");
+}
+
+function removeNoteJob(port, jobs, id) {
+  const job = jobs.get(id);
+  if (!job) {
+    return;
+  }
+
+  if (!TERMINAL_STATUSES.has(job.status)) {
+    job.cancelled = true;
+    job.controller?.abort();
+  }
+
+  jobs.delete(id);
+  syncJobs(port, jobs);
+  processNextJob(port, jobs);
+}
+
+function clearFinishedNoteJobs(port, jobs) {
+  for (const [id, job] of jobs.entries()) {
+    if (TERMINAL_STATUSES.has(job.status)) {
+      jobs.delete(id);
+    }
+  }
+
+  syncJobs(port, jobs);
+}
+
+function setJobStatus(port, jobs, id, status, message, updates = {}) {
+  const job = jobs.get(id);
+  if (!job) {
+    return;
+  }
+
+  Object.assign(job, updates, {
+    status,
+    message,
+    updatedAt: Date.now()
+  });
+  syncJobs(port, jobs);
+}
+
+function syncJobs(port, jobs) {
+  postJobs(port, jobs);
+  persistJobs(jobs);
+}
+
+function postJobs(port, jobs) {
+  const ports = noteJobPorts.size ? Array.from(noteJobPorts) : [port];
+  for (const targetPort of ports) {
+    try {
+      targetPort.postMessage({
+        action: "noteJobsUpdated",
+        jobs: Array.from(jobs.values()).map(toJobResponse)
+      });
+    } catch {
+      noteJobPorts.delete(targetPort);
+    }
+  }
+}
+
+async function restoreStoredJobs() {
+  const stored = await chrome.storage.local.get(JOB_STORAGE_KEY);
+  const storedJobs = Array.isArray(stored[JOB_STORAGE_KEY]) ? stored[JOB_STORAGE_KEY] : [];
+
+  for (const storedJob of storedJobs) {
+    const status = RESUMABLE_STATUSES.has(storedJob.status) ? "queued" : storedJob.status;
+    const message = RESUMABLE_STATUSES.has(storedJob.status)
+      ? "Restored after reopening the extension."
+      : storedJob.message || "";
+
+    noteJobs.set(storedJob.id, {
+      ...storedJob,
+      status,
+      message,
+      updatedAt: Date.now(),
+      cancelled: false,
+      controller: new AbortController()
+    });
+  }
+
+  jobsLoaded = true;
+}
+
+function persistJobs(jobs) {
+  if (!jobsLoaded) {
+    return;
+  }
+
+  chrome.storage.local.set({
+    [JOB_STORAGE_KEY]: Array.from(jobs.values()).map(toStoredJob)
+  });
+}
+
+function toStoredJob(job) {
+  return {
+    id: job.id,
+    title: job.title,
+    folder: job.folder,
+    sourceText: TERMINAL_STATUSES.has(job.status) ? "" : job.sourceText,
+    status: job.status,
+    message: job.message,
+    path: job.path,
+    markdown: job.markdown,
+    error: job.error,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt
+  };
+}
+
+function toJobResponse(job) {
+  return {
+    id: job.id,
+    title: job.title,
+    folder: job.folder,
+    status: job.status,
+    message: job.message,
+    path: job.path,
+    markdown: job.markdown,
+    error: job.error,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt
   };
 }
 
@@ -62,9 +347,10 @@ async function checkLlmStatus() {
   };
 }
 
-async function generateMarkdown(title, sourceText) {
+async function generateMarkdown(title, sourceText, signal) {
   const response = await fetch(CONFIG.lmStudioUrl, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json"
     },
