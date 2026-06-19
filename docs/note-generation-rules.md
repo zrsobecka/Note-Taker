@@ -1,6 +1,6 @@
 # Note Generation Rules
 
-These rules define how Chrome Note Clipper should turn copied text into Obsidian notes.
+These rules define how Obsidian Note Taker should turn copied text into Obsidian notes.
 
 The goal is not to summarize text nicely.
 
@@ -94,4 +94,3 @@ A good generated note should pass these checks:
 - Does it tell me how to think, not only what to remember?
 - Are the links useful for navigating my vault?
 - Is there anything generic that can be deleted?
-

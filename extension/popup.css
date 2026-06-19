@@ -1,26 +1,43 @@
 :root {
-  color-scheme: light;
-  font-family: Arial, sans-serif;
+  color-scheme: dark;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
   font-size: 14px;
+  --bg: #111016;
+  --panel: #191723;
+  --panel-strong: #211d2d;
+  --text: #f4f0ff;
+  --muted: #b7adca;
+  --subtle: #8c829f;
+  --border: #352f45;
+  --border-strong: #5f4b8b;
+  --accent: #8b5cf6;
+  --accent-strong: #a78bfa;
+  --accent-soft: rgba(139, 92, 246, 0.16);
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #fb7185;
 }
 
 body {
   margin: 0;
-  min-width: 360px;
-  background: #f7f7f4;
-  color: #1f2933;
+  min-width: 370px;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .shell {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 14px;
+  padding: 18px;
+  background: var(--bg);
 }
 
 h1 {
-  margin: 0 0 4px;
-  font-size: 18px;
-  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 760;
+  line-height: 1.2;
 }
 
 .statusBadge {
@@ -29,76 +46,105 @@ h1 {
   max-width: 100%;
   min-height: 24px;
   box-sizing: border-box;
-  margin: 2px 0 8px;
-  padding: 4px 8px;
-  border: 1px solid #c8d1d9;
+  margin: 0 0 8px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 760;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
 .statusChecking {
-  background: #fff7ed;
-  color: #7c2d12;
-  border-color: #fed7aa;
+  background: rgba(251, 191, 36, 0.13);
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.42);
 }
 
 .statusReady {
-  background: #ecfdf5;
-  color: #14532d;
-  border-color: #bbf7d0;
+  background: rgba(52, 211, 153, 0.12);
+  color: #a7f3d0;
+  border-color: rgba(52, 211, 153, 0.4);
 }
 
 .statusError {
-  background: #fef2f2;
-  color: #991b1b;
-  border-color: #fecaca;
+  background: rgba(251, 113, 133, 0.13);
+  color: #fecdd3;
+  border-color: rgba(251, 113, 133, 0.42);
 }
 
 p {
   margin: 0;
-  color: #52616b;
+  color: var(--muted);
+  font-size: 12px;
   line-height: 1.4;
 }
 
 label {
   display: grid;
   gap: 6px;
-  font-weight: 700;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 760;
 }
 
 input,
 select,
 button {
-  border: 1px solid #c8d1d9;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font: inherit;
 }
 
 input,
 select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
   padding: 9px 10px;
-  background: #ffffff;
+  background: var(--panel);
+  color: var(--text);
+  outline: none;
+}
+
+input::placeholder {
+  color: var(--subtle);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 button {
-  min-height: 38px;
+  min-height: 40px;
   padding: 8px 12px;
-  background: #14532d;
+  border-color: #7c3aed;
+  background: var(--accent);
   color: #ffffff;
   cursor: pointer;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 900;
+  text-shadow: 0 1px 1px rgba(17, 16, 22, 0.45);
+}
+
+button:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 button:disabled {
-  background: #8a969f;
+  background: #3a334a;
+  border-color: var(--border);
+  color: var(--subtle);
   cursor: wait;
 }
 
 .result {
-  border-top: 1px solid #d8dee4;
-  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
 }
 
 .resultHeader {
@@ -106,12 +152,14 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+  color: var(--text);
 }
 
 .resultHeader button {
-  min-height: 28px;
-  padding: 4px 8px;
-  background: #374151;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-color: var(--border-strong);
+  background: var(--panel-strong);
   font-size: 12px;
 }
 
@@ -120,10 +168,12 @@ pre {
   max-height: 220px;
   overflow: auto;
   margin: 0;
-  padding: 10px;
-  border: 1px solid #d8dee4;
+  padding: 11px;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #ffffff;
-  color: #24313a;
+  background: var(--panel);
+  color: #e9ddff;
+  font-size: 12px;
+  line-height: 1.45;
   white-space: pre-wrap;
 }

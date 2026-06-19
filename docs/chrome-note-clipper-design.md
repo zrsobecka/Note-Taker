@@ -1,6 +1,6 @@
-# Chrome Note Clipper Design
+# Obsidian Note Taker Design
 
-Chrome Note Clipper is the first module of the Note Taker project.
+Obsidian Note Taker is the first module of the Note Taker project.
 
 ## Goal
 
@@ -48,4 +48,4 @@ http://localhost:1234/v1/chat/completions
 
 The whole project is `Note Taker`.
 
-The Chrome feature is named `Chrome Note Clipper`.
+The Chrome extension is named `Obsidian Note Taker`.

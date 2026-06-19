@@ -12,7 +12,7 @@ REGISTRY_KEY = rf"Software\Google\Chrome\NativeMessagingHosts\{HOST_NAME}"
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Register the Chrome Note Clipper native messaging host."
+        description="Register the Obsidian Note Taker native messaging host."
     )
     parser.add_argument(
         "--extension-id",

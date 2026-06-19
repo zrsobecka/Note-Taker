@@ -2,7 +2,7 @@
 
 Note Taker is a local Windows project for turning copied or selected browser text into clean Obsidian Markdown notes.
 
-The first module is Chrome Note Clipper:
+The first module is Obsidian Note Taker:
 
 - `extension/` - Chrome extension UI and LM Studio integration.
 - `native-host/` - Python native messaging host that saves `.md` files into an Obsidian vault.
@@ -10,7 +10,7 @@ The first module is Chrome Note Clipper:
 ## Flow
 
 1. Select text on a web page or copy text to the clipboard.
-2. Open the Chrome Note Clipper extension.
+2. Open the Obsidian Note Taker extension.
 3. Enter a note title and choose an Obsidian folder.
 4. The extension sends the text to LM Studio running locally.
 5. The extension sends the generated Markdown to the Python native host.
@@ -90,3 +90,9 @@ Set `vault_path` to your Obsidian vault path.
 The extension reads folders from this vault and asks you to choose one before saving.
 
 Use `excluded_folders` to hide technical folders from the Chrome picker without deleting them from the vault.
+
+## Why I built this
+
+I take notes to study from every day.
+
+Copying content manually into Obsidian was slow and repetitive, so I built a Chrome extension that captures text, generates structured Markdown notes using a local LLM, and saves them directly into my Obsidian vault.

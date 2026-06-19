@@ -8,9 +8,9 @@ def main():
 
     result = save_note(
         {
-            "title": "Chrome Note Clipper Test",
+            "title": "Obsidian Note Taker Test",
             "folder": target_folder,
-            "markdown": "# Chrome Note Clipper Test\n\n## W skrócie\n\nTest zapisu z Python helpera.\n",
+            "markdown": "# Obsidian Note Taker Test\n\n## W skrócie\n\nTest zapisu z Python helpera.\n",
         }
     )
     print(result["path"])
