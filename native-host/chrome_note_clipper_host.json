@@ -1,0 +1,9 @@
+{
+  "name": "com.note_taker.chrome_note_clipper",
+  "description": "Native host for Chrome Note Clipper",
+  "path": "C:\\Users\\zusob\\Dropbox\\Note Taker\\native-host\\chrome_note_clipper_host.bat",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://iepijjajkcifjleieclnclhkanmodppg/"
+  ]
+}

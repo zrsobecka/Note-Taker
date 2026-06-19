@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chrome Note Clipper</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <h1>Chrome Note Clipper</h1>
+        <div id="llmStatus" class="statusBadge statusChecking">LLM: checking...</div>
+        <p id="sourceStatus">Select text on the page or copy text first.</p>
+      </header>
+
+      <label>
+        Title
+        <input id="titleInput" type="text" autocomplete="off" placeholder="e.g. HTTP headers in practice">
+      </label>
+
+      <label>
+        Folder
+        <select id="folderInput">
+          <option value="">Loading folders...</option>
+        </select>
+      </label>
+
+      <button id="saveButton" type="button">Generate note</button>
+
+      <section id="resultBox" class="result" hidden>
+        <div class="resultHeader">
+          <strong>Status</strong>
+          <button id="copyButton" type="button">Copy</button>
+        </div>
+        <pre id="resultText"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
