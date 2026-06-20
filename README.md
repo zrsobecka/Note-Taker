@@ -1,102 +1,62 @@
 # Note Taker
 
-Note Taker is a local Windows project for turning browser content into clean Obsidian Markdown notes.
+Local Windows Chrome extension for turning browser content into clean Obsidian Markdown notes with LM Studio.
 
-The first module is Obsidian Note Taker:
+## Components
 
-- `extension/` - Chrome extension UI and LM Studio integration.
-- `native-host/` - Python native messaging host that saves `.md` files into an Obsidian vault.
+- `extension/` - Chrome popup, queue monitor, LM Studio integration.
+- `native-host/` - Python Native Messaging host that saves `.md` files to an Obsidian vault.
+- `docs/` - product notes and note-generation rules.
 
 ## Flow
 
-1. Choose the source text mode in the Chrome extension:
-   - auto: selected text first, then clipboard;
-   - selected text only;
-   - clipboard only;
-   - full page text.
-2. Open the Obsidian Note Taker extension.
-3. Enter a note title, choose an Obsidian folder, choose the note language, and choose the LM Studio model.
-4. The extension sends the text to LM Studio running locally.
-5. The extension sends the generated Markdown to the Python native host.
-6. The Python host saves the note as a `.md` file in the selected Obsidian folder.
+1. Choose text source: auto selection→clipboard, selected only, clipboard only, or full page text.
+2. Enter title, Obsidian folder, note language, and LM Studio model.
+3. Add note to queue.
+4. Queue monitor sends source text to LM Studio.
+5. Native host saves generated Markdown into the selected vault folder.
 
 ## Requirements
 
 - Windows
 - Google Chrome
 - Python 3.10+
-- LM Studio with the local server enabled
-- An Obsidian vault folder
+- LM Studio local server
+- Obsidian vault
 
-## LM Studio
-
-Start the LM Studio local server and make sure it exposes an OpenAI-compatible endpoint:
+LM Studio endpoint:
 
 ```text
 http://localhost:1234/v1/chat/completions
 ```
 
-The Chrome popup shows an LLM status badge:
+Model list endpoint:
 
-- `LLM: ready` - LM Studio is reachable and at least one model is loaded.
-- `LLM: connected, no loaded model` - the server responds, but no model is available.
-- `LLM: not connected` - LM Studio is not reachable from the extension.
+```text
+http://localhost:1234/v1/models
+```
 
-The model dropdown is populated from the LM Studio `/models` endpoint. The selected model is stored per queued note.
+## Config
 
-## Project Config
+- `extension/config.js` - LM Studio URL, default model, native host name, source character limit.
+- Copy `native-host/config.example.json` to `native-host/config.json` - local vault path and excluded folders.
+- `docs/note-generation-rules.md` - generated note rules.
 
-Edit these files before using the project:
+Local-only config is ignored by Git. Keep personal paths and Chrome extension IDs out of tracked files.
 
-- `extension/config.js`
-  - LM Studio URL
-  - model name
-  - native host name
-- copy `native-host/config.example.json` to `native-host/config.json`
-  - Obsidian vault path
-  - folders hidden from the Chrome folder picker
-- `docs/note-generation-rules.md`
-  - rules for Obsidian-friendly generated notes
+## Install
 
-Local-only files are ignored by Git. Keep personal paths and Chrome extension IDs in local files, not in tracked examples.
-
-## Load Chrome Extension
-
-1. Open Chrome.
-2. Go to `chrome://extensions`.
-3. Enable Developer mode.
-4. Click Load unpacked.
-5. Select the `extension/` folder from your local project checkout.
-
-6. Copy the extension ID shown by Chrome.
-
-## Install Native Host
-
-From PowerShell, replace `YOUR_EXTENSION_ID` with the ID copied from Chrome:
+1. Open `chrome://extensions`.
+2. Enable Developer mode.
+3. Load unpacked and select the local `extension/` folder.
+4. Copy the extension ID.
+5. Register the native host:
 
 ```powershell
 cd "C:\Path\To\Note Taker\native-host"
 python install_native_host.py --extension-id YOUR_EXTENSION_ID
 ```
 
-This registers the native messaging host for Chrome and allows this extension to save notes.
+6. Edit local `native-host\config.json` and set `vault_path`.
 
-## Obsidian Vault
-
-Before saving real notes, copy the example config and edit your local file:
-
-```text
-native-host\config.json
-```
-
-Set `vault_path` to your Obsidian vault path.
-
-The extension reads folders from this vault and asks you to choose one before saving.
-
-Use `excluded_folders` to hide technical folders from the Chrome picker without deleting them from the vault.
-
-## Why I built this
-
-I take notes to study from every day.
-
-Copying content manually into Obsidian was slow and repetitive, so I built a Chrome extension that captures text, generates structured Markdown notes using a local LLM, and saves them directly into my Obsidian vault.
+The extension reads folders from this vault and uses `excluded_folders` to hide technical folders from the picker.
