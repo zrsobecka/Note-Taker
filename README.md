@@ -1,56 +1,138 @@
 # Note Taker
 
-Local Windows Chrome extension for turning browser content into clean Obsidian Markdown notes with LM Studio.
+Turn browser content into high-quality Obsidian notes using a local LLM.
 
-## What It Does
+Note Taker is a Windows Chrome extension that captures text from a webpage, sends it to a local model running in LM Studio, and saves the generated Markdown note directly into your Obsidian vault.
 
-Note Taker helps capture useful knowledge from browser content without sending source text to a cloud API.
+The important difference: this is built around local AI. Your source material can stay on your own machine, you choose the model, and no cloud API key is required.
 
-1. Choose a text source: auto selection -> clipboard, selected only, clipboard only, or full page text.
-2. Enter a title, Obsidian folder, note language, and LM Studio model.
-3. Add the note to the queue.
-4. The queue monitor sends the source text to LM Studio's local OpenAI-compatible API.
-5. The native host saves the generated Markdown file into the configured Obsidian vault.
+## Why It Exists
 
-The goal is not short summaries. The prompt rules turn source material into practical Obsidian notes that explain concepts, preserve useful context, and remain useful later.
+Most AI note-taking tools follow this pattern:
 
-## Components
+```text
+Website -> Cloud AI provider -> Summary -> Notes
+```
 
-- `extension/` - Chrome popup, queue monitor, source extraction, LM Studio requests, prompt code.
-- `native-host/` - Python Native Messaging host that lists vault folders and writes `.md` files.
-- `docs/` - product notes and note-generation rules.
+That can be convenient, but it usually means your source material leaves your computer, you pay API costs, and you depend on one provider's model and product decisions.
 
-For a deeper file map, see `CODEBASE.md`. For the runtime flow, see `WORKFLOW-DIAGRAM.md`.
+Note Taker uses a local-first flow instead:
 
-## Requirements
+```text
+Website -> Chrome extension -> LM Studio on localhost -> Markdown -> Obsidian vault
+```
 
-- Windows
-- Google Chrome
-- Python 3.10+
-- LM Studio local server
-- Obsidian vault
+This gives you:
 
-LM Studio endpoints used by the extension:
+- local-first privacy for sensitive reading and research;
+- no required cloud API subscription;
+- control over which model generates your notes;
+- direct saving into your own Obsidian vault;
+- prompt rules you can inspect and customize.
+
+## What Makes It Different
+
+The core feature is the LM Studio integration.
+
+Instead of sending browser content to OpenAI, Anthropic, or another hosted AI provider, Note Taker calls LM Studio's local OpenAI-compatible API:
 
 ```text
 http://localhost:1234/v1/chat/completions
 http://localhost:1234/v1/models
 ```
 
+Any model exposed by LM Studio can be used, including local models from families such as Qwen, Llama, Gemma, Mistral, and DeepSeek.
+
+Because the model runs locally:
+
+- private source material does not need to leave your device;
+- you can improve note quality by switching models;
+- you are not locked into one AI provider;
+- note generation can run without per-request API billing.
+
+If you configure LM Studio or a compatible server to use a remote endpoint, that changes the privacy boundary. Review your setup before processing private material.
+
+## What The Notes Are Like
+
+Note Taker is designed to create reusable knowledge notes, not tiny summaries.
+
+The prompt rules ask the model to:
+
+- preserve important concepts, examples, frameworks, tradeoffs, and warnings;
+- remove website clutter such as navigation, banners, forms, and repeated UI text;
+- explain the material clearly enough that the note remains useful later;
+- write in the language selected for that specific note;
+- save the output as clean Markdown for Obsidian.
+
+The note-generation rules live in:
+
+```text
+docs/note-generation-rules.md
+```
+
+## How It Works
+
+1. Open a webpage.
+2. Select text, copy text, or choose full-page capture.
+3. Open Note Taker.
+4. Enter a title, Obsidian folder, note language, and LM Studio model.
+5. Add the note to the queue.
+6. The queue monitor sends the source text to LM Studio.
+7. The local model generates structured Markdown.
+8. The native host saves the Markdown file inside your configured Obsidian vault.
+
+Supported text sources:
+
+- auto selection -> clipboard;
+- selected text only;
+- clipboard only;
+- full page text.
+
+## Requirements
+
+- Windows
+- Google Chrome
+- Python 3.10+
+- LM Studio
+- At least one model downloaded in LM Studio
+- Obsidian vault
+
+## Before Installing
+
+1. Install [LM Studio](https://lmstudio.ai).
+2. Download a local model in LM Studio.
+3. Open LM Studio's local server screen.
+4. Start the local server.
+5. Confirm it is running on `localhost:1234`.
+
+Do this before using the extension, because Note Taker reads the available models from LM Studio.
+
 ## Install
 
-1. Open `chrome://extensions`.
-2. Enable Developer mode.
-3. Choose **Load unpacked** and select the local `extension/` folder.
-4. Copy the generated Chrome extension ID.
-5. Copy the native host config example:
+1. Clone or download this repository.
+2. Open `chrome://extensions`.
+3. Enable Developer mode.
+4. Choose **Load unpacked** and select the local `extension/` folder.
+5. Copy the generated Chrome extension ID.
+6. Copy the native host config example:
 
 ```powershell
 Copy-Item native-host\config.example.json native-host\config.json
 ```
 
-6. Edit `native-host\config.json` and set `vault_path` to your local Obsidian vault.
-7. Register the native host:
+7. Edit `native-host\config.json` and set `vault_path` to your local Obsidian vault:
+
+```json
+{
+  "vault_path": "C:\\Path\\To\\Your\\ObsidianVault",
+  "excluded_folders": [
+    "docs/superpowers"
+  ],
+  "filename_date_prefix": false
+}
+```
+
+8. Register the native host:
 
 ```powershell
 cd "C:\Path\To\Note Taker\native-host"
@@ -74,18 +156,7 @@ Local-only config is ignored by Git:
 
 Keep real vault paths, Chrome extension IDs, API keys, tokens, and machine-specific details out of tracked files.
 
-## Data And Privacy
-
-This project is designed for a local workflow:
-
-- Browser source text is sent to LM Studio on `localhost`.
-- Generated Markdown is written to the configured local Obsidian vault.
-- Queue state, selected model, selected language, and recent UI settings are stored in Chrome extension storage.
-- The native host writes a local log file at `native-host/native-host.log`.
-
-The extension does not require a cloud API key. If you point LM Studio or a compatible endpoint at a remote server, source text may leave your machine; document that choice in your own local setup before using it with private material.
-
-## Permissions
+## Permissions And Privacy
 
 The Chrome extension requests:
 
@@ -95,15 +166,34 @@ The Chrome extension requests:
 - `storage` to keep queue and UI state.
 - `http://localhost:1234/*` and `http://127.0.0.1:1234/*` to call LM Studio locally.
 
+By default:
+
+- browser source text is sent to LM Studio on `localhost`;
+- generated Markdown is written to the configured local Obsidian vault;
+- queue state, selected model, selected language, and recent UI settings are stored in Chrome extension storage;
+- the native host writes a local log file at `native-host/native-host.log`;
+- no external AI API key is required.
+
+## Project Structure
+
+```text
+extension/     Chrome popup, queue monitor, source extraction, LM Studio requests
+native-host/   Python Native Messaging host that writes notes to Obsidian
+docs/          Note-generation rules and product documentation
+tools/         Utility scripts
+```
+
+For a deeper file map, see `CODEBASE.md`. For the runtime flow, see `WORKFLOW-DIAGRAM.md`.
+
 ## Out Of Scope
 
 This repository does not include:
 
-- A hosted backend.
-- Cloud model integrations.
-- Cross-browser packaging.
-- Obsidian plugin code.
-- Sync between machines.
+- hosted backend services;
+- built-in cloud model integrations;
+- cross-browser packaging;
+- Obsidian plugin code;
+- sync between machines.
 
 ## Verify
 
@@ -121,13 +211,7 @@ Python syntax checks:
 python -m py_compile native-host\install_native_host.py native-host\chrome_note_clipper_host.py
 ```
 
-## Note Rules
-
-The note-generation behavior is documented in:
-
-```text
-docs/note-generation-rules.md
-```
+## Development Notes
 
 Until prompt construction is shared, keep note behavior aligned in:
 
