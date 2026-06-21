@@ -1,0 +1,3 @@
+# Keep public docs stable across Windows, macOS, and Linux.
+/.gitattributes text eol=lf
+*.md text eol=lf
