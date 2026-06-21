@@ -218,3 +218,7 @@ Until prompt construction is shared, keep note behavior aligned in:
 - `docs/note-generation-rules.md`
 - `extension/queue.js`
 - `extension/service_worker.js`
+
+## Licence
+
+MIT License. See `LICENCE.md`.
