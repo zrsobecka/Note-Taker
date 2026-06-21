@@ -15,6 +15,16 @@
       </header>
 
       <label>
+        Text source
+        <select id="sourceModeInput">
+          <option value="auto" selected>Auto: selection, then clipboard</option>
+          <option value="selection">Selected text only</option>
+          <option value="clipboard">Clipboard only</option>
+          <option value="page">Full page text</option>
+        </select>
+      </label>
+
+      <label>
         Title
         <input id="titleInput" type="text" autocomplete="off" placeholder="e.g. HTTP headers in practice">
       </label>
@@ -23,6 +33,21 @@
         Folder
         <select id="folderInput">
           <option value="">Loading folders...</option>
+        </select>
+      </label>
+
+      <label>
+        Note language
+        <select id="languageInput">
+          <option value="polski" selected>Polski</option>
+          <option value="angielski">English</option>
+        </select>
+      </label>
+
+      <label>
+        Model
+        <select id="modelInput">
+          <option value="">Loading models...</option>
         </select>
       </label>
 

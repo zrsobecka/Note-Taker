@@ -150,7 +150,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${job.message || ""}`;
+  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -182,6 +182,14 @@ function createJobElement(job) {
   item.append(actions);
 
   return item;
+}
+
+function getNoteLanguage(job) {
+  return job.noteLanguage || "polski";
+}
+
+function getNoteModel(job) {
+  return job.noteModel || CONFIG.lmStudioModel;
 }
 
 function createJobButton(label, action, id, className) {
@@ -264,7 +272,13 @@ async function runJob(job) {
     }));
     setMonitorStatus(`Generating: ${job.title}`);
 
-    const markdown = await generateMarkdown(job.title, job.sourceText, activeController.signal);
+    const markdown = await generateMarkdown(
+      job.title,
+      job.sourceText,
+      getNoteLanguage(job),
+      getNoteModel(job),
+      activeController.signal
+    );
     await ensureJobStillActive(job.id);
 
     await updateStoredJob(job.id, (current) => ({
@@ -358,7 +372,7 @@ function stopHeartbeat() {
   heartbeatTimer = null;
 }
 
-async function generateMarkdown(title, sourceText, signal) {
+async function generateMarkdown(title, sourceText, noteLanguage, noteModel, signal) {
   const response = await fetch(CONFIG.lmStudioUrl, {
     method: "POST",
     signal,
@@ -366,7 +380,7 @@ async function generateMarkdown(title, sourceText, signal) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: CONFIG.lmStudioModel,
+      model: noteModel || CONFIG.lmStudioModel,
       temperature: 0.3,
       messages: [
         {
@@ -375,7 +389,7 @@ async function generateMarkdown(title, sourceText, signal) {
         },
         {
           role: "user",
-          content: buildUserPrompt(title, sourceText)
+          content: buildUserPrompt(title, sourceText, noteLanguage)
         }
       ]
     })
@@ -425,62 +439,82 @@ function getLmStudioModelsUrl() {
 
 function buildSystemPrompt() {
   return [
-    "You turn copied source text into clean Obsidian Markdown notes.",
-    "The goal is not to summarize text nicely. The goal is to create a reusable knowledge note.",
-    "Write in the same language as the source text.",
-    "Use a practical, clear, human tone with short paragraphs.",
-    "Do not sound academic. Do not add filler or generic advice.",
-    "Do not copy the source text verbatim.",
-    "Transform the source into practical understanding, mental models, and useful future reference.",
-    "Prefer clear mental models over long explanations.",
-    "Use bullets when they improve scanning.",
-    "Use tables only when they make comparison or process clearer.",
-    "Remove unnecessary details and anything that future me will not use.",
-    "Add Obsidian wiki links for key terms, for example [[HTTP]], [[URL]], [[Cookies]], [[Headers]], [[curl]].",
-    "Use specific links when obvious, but do not over-link every word.",
+    "Jesteś ekspertem od tworzenia notatek do Obsidiana. Bardzo ci zależy żeby wytłumaczyć temat jak najlepiej.",
+    "Twoim zadaniem NIE jest streszczenie tekstu.",
+    "Masz zamienić materiał źródłowy w praktyczną notatkę edukacyjną, która pomaga zrozumieć temat i wykorzystać go później.",
+    "Dostosuj język notatki do wybranego języka w rozszerzeniu dla tej konkretnej notatki.",
+    "Nie kopiuj zdań z materiału.",
+    "Nie twórz streszczenia rozdział po rozdziale.",
+    "Ignoruj śmieci ze strony, które nie są wiedzą: menu, nawigację, przyciski, etykiety UI, stopki, bannery, reklamy, komunikaty cookies, formularze, linki typu next/previous, liczniki, komentarze techniczne strony i powtarzalne elementy layoutu.",
+    "Nie uwzględniaj w notatce treści, która jest tylko częścią interfejsu strony, a nie częścią materiału edukacyjnego.",
+    "Łącz podobne informacje.",
+    "Wyjaśniaj mechanizmy.",
+    "Pisz jak mentor tłumaczący temat inteligentnej osobie.",
+    "Skupiaj się na modelach myślowych, decyzjach i praktyce.",
+    "Jeżeli materiał jest o biznesie, startupach, AI, sprzedaży lub fundraisingu, szczególnie podkreśl sposób myślenia ekspertów, sygnały decyzyjne, błędy początkujących i praktyczne wykorzystanie.",
+    "Notatka ma być użyteczna za 6 miesięcy, nie tylko dzisiaj.",
+    "Jeśli materiał dotyczy rzeczy technicznych, kodowania, programowania albo podobnych tematów, tłumacz tekst jak najbardziej po ludzku, ale zachowaj techniczne wyrażenia.",
+    "Podkreśl zastosowanie materiału w praktyce.",
+    "Dodaj sensowne linki Obsidian wiki dla powiązanych pojęć, na przykład [[AI]], [[Sprzedaż]], [[Pipeline]], [[CRM]].",
+    "Nie linkuj każdego słowa.",
     "Return only Markdown."
   ].join("\n");
 }
 
-function buildUserPrompt(title, sourceText) {
+function buildUserPrompt(title, sourceText, noteLanguage) {
   return [
     `Title: ${title}`,
+    `Wybrany język notatki: ${noteLanguage || "polski"}`,
     "",
-    "Use exactly this Markdown structure:",
+    "Użyj tej struktury Markdown:",
     "",
     `# ${title}`,
     "",
+    "Krótkie 1-2 zdaniowe wyjaśnienie czym jest temat i dlaczego jest ważny.",
+    "",
     "## Główna idea",
     "",
-    "One clear idea in plain language.",
+    "Wyjaśnij jedną najważniejszą myśl autora własnymi słowami.",
     "",
-    "## Co muszę zrozumieć",
+    "## Jak działa ten mechanizm",
     "",
-    "The core concepts, broken into small chunks.",
+    "Opisz logikę stojącą za tematem. Nie przepisuj treści. Wytłumacz dlaczego to działa.",
     "",
-    "## Jak o tym myśleć",
+    "## Jak myśli ekspert",
     "",
-    "Mental model, comparison, frame, or decision logic.",
+    "Przedstaw sposób myślenia osoby, która naprawdę rozumie temat.",
     "",
-    "## Przydatne w praktyce",
+    "- Jakie sygnały zauważa?",
+    "- Jak ocenia sytuację?",
+    "- Jakie błędy popełniają początkujący?",
     "",
-    "How to use this knowledge in real work.",
+    "## Co ma znaczenie w praktyce",
+    "",
+    "Zamień teorię na konkretne działania.",
+    "",
+    "- co robić",
+    "- czego unikać",
+    "- na co zwracać uwagę",
+    "",
+    "## Framework",
+    "",
+    "Jeżeli w materiale istnieje proces, model, strategia lub metoda działania, opisz ją jako prosty framework krok po kroku. Jeśli nie istnieje, pomiń tę sekcję.",
     "",
     "## Najważniejsze wnioski",
     "",
-    "Short bullet list of what matters most.",
+    "5-10 najważniejszych rzeczy, które warto zapamiętać.",
     "",
     "## Powiązane pojęcia",
     "",
-    "- [[Key Concept]]",
-    "- [[Another Concept]]",
+    "- [[...]]",
+    "- [[...]]",
+    "- [[...]]",
     "",
-    "Optional sections:",
-    "- Add ## Komendy only if the source includes commands, CLI usage, code snippets, or technical steps.",
-    "- Add ## Proces only if the source describes a workflow.",
-    "- Add ## Checklist only if the note should guide repeated action.",
-    "- Add ## Przykład only if one simple example makes the idea easier to remember.",
-    "- Add ## Pułapki only if the source warns about mistakes or false assumptions.",
+    "## Moje zastosowanie",
+    "",
+    "Jak mogę wykorzystać to w mojej pracy?",
+    "",
+    "Podaj konkretne przykłady zastosowania.",
     "",
     "Source text:",
     sourceText

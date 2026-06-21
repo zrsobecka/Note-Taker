@@ -2,11 +2,14 @@ import { CONFIG } from "./config.js";
 
 const titleInput = document.querySelector("#titleInput");
 const folderInput = document.querySelector("#folderInput");
+const languageInput = document.querySelector("#languageInput");
+const modelInput = document.querySelector("#modelInput");
 const saveButton = document.querySelector("#saveButton");
 const copyButton = document.querySelector("#copyButton");
 const resultBox = document.querySelector("#resultBox");
 const resultText = document.querySelector("#resultText");
 const sourceStatus = document.querySelector("#sourceStatus");
+const sourceModeInput = document.querySelector("#sourceModeInput");
 const llmStatus = document.querySelector("#llmStatus");
 const clearFinishedButton = document.querySelector("#clearFinishedButton");
 const openMonitorButton = document.querySelector("#openMonitorButton");
@@ -62,6 +65,28 @@ async function getClipboardText() {
   }
 }
 
+async function getPageText() {
+  const tab = await getActiveTab();
+  if (!tab?.id) {
+    return "";
+  }
+
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        const title = document.title ? `${document.title}\n\n` : "";
+        return `${title}${document.body?.innerText || ""}`;
+      }
+    });
+
+    return result?.result?.trim() || "";
+  } catch (error) {
+    console.warn("Could not read full page text.", error);
+    return "";
+  }
+}
+
 function setStatus(message) {
   sourceStatus.textContent = message;
 }
@@ -87,12 +112,30 @@ async function checkLlmStatus() {
 
     if (!response.loaded) {
       setLlmStatus("LLM: connected, no loaded model", "statusChecking");
+      fillModelOptions(response.models || []);
       return;
     }
 
+    fillModelOptions(response.models || [], response.modelName);
     setLlmStatus(`LLM: ready - ${response.modelName}`, "statusReady");
   } catch (error) {
+    fillModelOptions([]);
     setLlmStatus(`LLM: not connected - ${error.message}`, "statusError");
+  }
+}
+
+function fillModelOptions(models, selectedModel = CONFIG.lmStudioModel) {
+  modelInput.textContent = "";
+
+  const uniqueModels = Array.from(new Set(models || []));
+  const modelOptions = uniqueModels.length ? uniqueModels : [CONFIG.lmStudioModel];
+
+  for (const model of modelOptions) {
+    const option = document.createElement("option");
+    option.value = model;
+    option.textContent = model;
+    option.selected = model === selectedModel;
+    modelInput.append(option);
   }
 }
 
@@ -130,9 +173,23 @@ async function loadFolders() {
   }
 }
 
-async function loadSourceText() {
-  const selected = await getSelectedText();
-  const clipboard = selected ? "" : await getClipboardText();
+async function loadSourceText(sourceMode = sourceModeInput.value || "auto") {
+  if (sourceMode === "page") {
+    const pageText = await getPageText();
+    sourceText = pageText.slice(0, CONFIG.maxSourceCharacters);
+
+    if (pageText) {
+      const clipped = pageText.length > sourceText.length ? `, clipped to ${sourceText.length}` : "";
+      setStatus(`Using full page text (${pageText.length} characters${clipped}).`);
+      return;
+    }
+
+    setStatus("No readable page text found. Try selected text or clipboard instead.");
+    return;
+  }
+
+  const selected = sourceMode !== "clipboard" ? await getSelectedText() : "";
+  const clipboard = sourceMode !== "selection" && !selected ? await getClipboardText() : "";
   sourceText = (selected || clipboard).slice(0, CONFIG.maxSourceCharacters);
 
   if (selected) {
@@ -145,7 +202,17 @@ async function loadSourceText() {
     return;
   }
 
-  setStatus("No selected or copied text found. If the page blocks selection access, copy the text and try again.");
+  if (sourceMode === "selection") {
+    setStatus("No selected text found. Select text on the page and try again.");
+    return;
+  }
+
+  if (sourceMode === "clipboard") {
+    setStatus("No copied text found. Copy text and try again.");
+    return;
+  }
+
+  setStatus("No selected or copied text found. Copy the text if the selection disappears, then try again.");
 }
 
 async function sendToServiceWorker(message) {
@@ -202,7 +269,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${job.message || ""}`;
+  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -234,6 +301,14 @@ function createJobElement(job) {
   item.append(actions);
 
   return item;
+}
+
+function getNoteLanguage(job) {
+  return job.noteLanguage || "polski";
+}
+
+function getNoteModel(job) {
+  return job.noteModel || CONFIG.lmStudioModel;
 }
 
 function createJobButton(label, action, id, className) {
@@ -300,11 +375,13 @@ function openQueueMonitor() {
 saveButton.addEventListener("click", async () => {
   const title = titleInput.value.trim();
   const folder = folderInput.value;
+  const noteLanguage = languageInput.value || "polski";
+  const noteModel = modelInput.value || CONFIG.lmStudioModel;
 
   saveButton.disabled = true;
   saveButton.textContent = "Adding...";
 
-  await loadSourceText();
+  await loadSourceText(sourceModeInput.value);
 
   if (!sourceText) {
     showResult("Select text on the page or copy text first.");
@@ -336,6 +413,8 @@ saveButton.addEventListener("click", async () => {
       id: createJobId(),
       title,
       folder,
+      noteLanguage,
+      noteModel,
       sourceText,
       status: "queued",
       message: "Waiting for queue monitor.",
@@ -407,6 +486,10 @@ clearFinishedButton.addEventListener("click", () => {
 
 openMonitorButton.addEventListener("click", () => {
   openQueueMonitor();
+});
+
+sourceModeInput.addEventListener("change", () => {
+  loadSourceText(sourceModeInput.value);
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {

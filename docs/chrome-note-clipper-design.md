@@ -1,51 +1,31 @@
 # Obsidian Note Taker Design
 
-Obsidian Note Taker is the first module of the Note Taker project.
-
-## Goal
-
-Turn selected or copied browser text into a clean Obsidian Markdown note using a local LM Studio model.
+First module of `Note Taker`: create useful Obsidian notes from browser content using local LM Studio.
 
 ## Components
 
-- Chrome extension
-  - Reads selected text from the active tab.
-  - Falls back to clipboard text.
-  - Asks for title and requires a target Obsidian folder.
-  - Sends source text to LM Studio.
-  - Sends generated Markdown to the native host.
-- Python native host
-  - Lists folders from the configured Obsidian vault.
-  - Receives Markdown from Chrome through Native Messaging.
-  - Creates a safe Windows filename.
-  - Saves a `.md` file into the selected Obsidian vault folder.
+| Part | Responsibility |
+|---|---|
+| Chrome popup | Choose text source, title, folder, note language, and model; add jobs to queue. |
+| Text sources | Auto selection→clipboard, selected only, clipboard only, full page text. |
+| Queue monitor | Process one note at a time; show status; stop, remove, or copy jobs. |
+| LM Studio | OpenAI-compatible local chat API and `/models` list. |
+| Native host | List vault folders and save generated Markdown safely into the selected folder. |
 
-## Note Structure
+## Note Rules
 
-```markdown
-# {title}
+`docs/note-generation-rules.md` is the source of truth for note structure and quality.
 
-## W skrócie
+Generated notes should teach the topic, explain mechanisms, ignore page UI noise, and stay useful as future Obsidian reference material.
 
-## Najważniejsze
-
-## Jak o tym myśleć
-
-## Przydatne w praktyce
-
-## Słowa-klucze
-```
-
-## Local LLM
-
-The extension expects LM Studio to expose an OpenAI-compatible local API:
+## Local API
 
 ```text
 http://localhost:1234/v1/chat/completions
+http://localhost:1234/v1/models
 ```
 
 ## Naming
 
-The whole project is `Note Taker`.
-
-The Chrome extension is named `Obsidian Note Taker`.
+- Project: `Note Taker`
+- Chrome extension: `Obsidian Note Taker`
