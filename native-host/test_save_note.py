@@ -1,16 +1,14 @@
-from chrome_note_clipper_host import list_folders, save_note
+from chrome_note_clipper_host import load_config, resolve_configured_save_folder, save_note
 
 
 def main():
-    folders = list_folders({})
-    print(f"Folders found: {len(folders['folders'])}")
-    target_folder = folders["folders"][0] if folders["folders"] else ""
+    target_folder = str(resolve_configured_save_folder(load_config()))
 
     result = save_note(
         {
-            "title": "Obsidian Note Taker Test",
-            "folder": target_folder,
-            "markdown": "# Obsidian Note Taker Test\n\n## W skrócie\n\nTest zapisu z Python helpera.\n",
+            "title": "Note Taker Test",
+            "folderPath": target_folder,
+            "markdown": "# Note Taker Test\n\n## W skrócie\n\nTest zapisu z Python helpera.\n",
         }
     )
     print(result["path"])

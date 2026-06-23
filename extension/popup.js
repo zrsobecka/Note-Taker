@@ -2,6 +2,7 @@ import { CONFIG } from "./config.js";
 
 const titleInput = document.querySelector("#titleInput");
 const folderInput = document.querySelector("#folderInput");
+const chooseFolderButton = document.querySelector("#chooseFolderButton");
 const languageInput = document.querySelector("#languageInput");
 const modelInput = document.querySelector("#modelInput");
 const saveButton = document.querySelector("#saveButton");
@@ -23,6 +24,7 @@ let noteJobs = [];
 const ACTIVE_STATUSES = new Set(["queued", "generating", "saving", "cancelling"]);
 const CANCELABLE_STATUSES = new Set(["queued", "generating"]);
 const JOB_STORAGE_KEY = "noteJobs";
+const SELECTED_FOLDER_STORAGE_KEY = "selectedSaveFolderPath";
 const STATUS_LABELS = {
   queued: "Queued",
   generating: "Generating",
@@ -139,38 +141,34 @@ function fillModelOptions(models, selectedModel = CONFIG.lmStudioModel) {
   }
 }
 
-function fillFolderOptions(folders) {
-  folderInput.textContent = "";
-
-  const uniqueFolders = Array.from(new Set(folders || []));
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = uniqueFolders.length ? "Choose folder..." : "No folders found";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  folderInput.append(placeholder);
-
-  for (const folder of uniqueFolders) {
-    const option = document.createElement("option");
-    option.value = folder;
-    option.textContent = folder;
-    folderInput.append(option);
-  }
+function setSaveFolderPath(folderPath) {
+  folderInput.value = String(folderPath || "");
 }
 
-async function loadFolders() {
-  try {
-    const response = await sendToServiceWorker({ action: "listFolders" });
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not load folders.");
-    }
+async function loadSelectedFolder() {
+  const stored = await chrome.storage.local.get(SELECTED_FOLDER_STORAGE_KEY);
+  setSaveFolderPath(stored[SELECTED_FOLDER_STORAGE_KEY]);
+}
 
-    fillFolderOptions(response.folders);
-  } catch (error) {
-    fillFolderOptions([]);
-    showResult(`Folder list error: ${error.message}`);
+function openFolderPicker() {
+  const pickerUrl = chrome.runtime.getURL("folder_picker.html");
+
+  if (!chrome.windows?.create) {
+    window.open(pickerUrl, "obsidian-folder-picker", "width=420,height=180");
+    return;
   }
+
+  chrome.windows.create({
+    url: pickerUrl,
+    type: "popup",
+    width: 420,
+    height: 180,
+    focused: true
+  }, () => {
+    if (chrome.runtime.lastError) {
+      window.open(pickerUrl, "obsidian-folder-picker", "width=420,height=180");
+    }
+  });
 }
 
 async function loadSourceText(sourceMode = sourceModeInput.value || "auto") {
@@ -269,7 +267,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
+  meta.textContent = `${job.folderPath || job.folder || "No save folder"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -374,7 +372,8 @@ function openQueueMonitor() {
 
 saveButton.addEventListener("click", async () => {
   const title = titleInput.value.trim();
-  const folder = folderInput.value;
+  const folderPath = folderInput.value.trim();
+  const folder = folderPath;
   const noteLanguage = languageInput.value || "polski";
   const noteModel = modelInput.value || CONFIG.lmStudioModel;
 
@@ -398,9 +397,9 @@ saveButton.addEventListener("click", async () => {
     return;
   }
 
-  if (!folder) {
+  if (!folderPath) {
     folderInput.focus();
-    showResult("Choose a folder first.");
+    showResult("Choose a save folder first.");
     saveButton.disabled = false;
     saveButton.textContent = "Add to queue";
     return;
@@ -413,6 +412,7 @@ saveButton.addEventListener("click", async () => {
       id: createJobId(),
       title,
       folder,
+      folderPath,
       noteLanguage,
       noteModel,
       sourceText,
@@ -488,22 +488,33 @@ openMonitorButton.addEventListener("click", () => {
   openQueueMonitor();
 });
 
+chooseFolderButton.addEventListener("click", () => {
+  openFolderPicker();
+  showResult("Folder picker opened. Choose a folder in the new window.");
+});
+
 sourceModeInput.addEventListener("change", () => {
   loadSourceText(sourceModeInput.value);
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName !== "local" || !changes[JOB_STORAGE_KEY]) {
+  if (areaName !== "local") {
     return;
   }
 
-  noteJobs = Array.isArray(changes[JOB_STORAGE_KEY].newValue)
-    ? changes[JOB_STORAGE_KEY].newValue
-    : [];
-  renderJobList();
+  if (changes[SELECTED_FOLDER_STORAGE_KEY]) {
+    setSaveFolderPath(changes[SELECTED_FOLDER_STORAGE_KEY].newValue);
+  }
+
+  if (changes[JOB_STORAGE_KEY]) {
+    noteJobs = Array.isArray(changes[JOB_STORAGE_KEY].newValue)
+      ? changes[JOB_STORAGE_KEY].newValue
+      : [];
+    renderJobList();
+  }
 });
 
 loadStoredJobs();
-loadFolders();
+loadSelectedFolder();
 loadSourceText();
 checkLlmStatus();

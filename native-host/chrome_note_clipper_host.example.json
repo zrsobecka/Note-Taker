@@ -1,6 +1,6 @@
 {
   "name": "com.note_taker.chrome_note_clipper",
-  "description": "Native host for Obsidian Note Taker",
+  "description": "Native host for Note Taker",
   "path": "C:\\Path\\To\\Note Taker\\native-host\\chrome_note_clipper_host.bat",
   "type": "stdio",
   "allowed_origins": [

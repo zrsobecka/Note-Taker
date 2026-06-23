@@ -1,0 +1,56 @@
+:root {
+  color-scheme: dark;
+  font-family: "Aptos", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --bg: #121216;
+  --panel: #1a1a20;
+  --text: #f1eff7;
+  --muted: #aaa5b6;
+  --border: #30303a;
+  --accent: #c8b8ff;
+  --accent-soft: rgba(181, 156, 255, 0.13);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+main {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+button {
+  justify-self: start;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+button:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}

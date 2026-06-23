@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Obsidian Note Taker</title>
+    <title>Note Taker</title>
     <link rel="stylesheet" href="popup.css">
   </head>
   <body>
     <main class="shell">
       <header>
-        <h1>Obsidian Note Taker</h1>
+        <h1>Note Taker</h1>
         <div id="llmStatus" class="statusBadge statusChecking">LLM: checking...</div>
         <p id="sourceStatus">Select text on the page or copy text first.</p>
       </header>
@@ -30,10 +30,11 @@
       </label>
 
       <label>
-        Folder
-        <select id="folderInput">
-          <option value="">Loading folders...</option>
-        </select>
+        Save folder
+        <div class="folderControl">
+          <input id="folderInput" type="text" readonly placeholder="Choose a local folder...">
+          <button id="chooseFolderButton" class="secondaryButton" type="button">Browse</button>
+        </div>
       </label>
 
       <label>

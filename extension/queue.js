@@ -150,7 +150,7 @@ function createJobElement(job) {
 
   const meta = document.createElement("p");
   meta.className = "jobMeta";
-  meta.textContent = `${job.folder || "Vault root"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
+  meta.textContent = `${job.folderPath || job.folder || "No save folder"} - ${getNoteLanguage(job)} - ${getNoteModel(job)} - ${job.message || ""}`;
   item.append(meta);
 
   if (job.path) {
@@ -284,18 +284,18 @@ async function runJob(job) {
     await updateStoredJob(job.id, (current) => ({
       ...current,
       status: "saving",
-      message: "Saving note to Obsidian.",
+      message: "Saving note.",
       heartbeatAt: Date.now(),
       updatedAt: Date.now()
     }));
     setMonitorStatus(`Saving: ${job.title}`);
 
-    const saved = await saveMarkdown(job.title, job.folder, markdown);
+    const saved = await saveMarkdown(job.title, job.folder, job.folderPath || job.folder || "", markdown);
     await updateStoredJob(job.id, (current) => ({
       ...current,
       sourceText: "",
       status: "saved",
-      message: "Saved to Obsidian.",
+      message: "Saved.",
       path: saved.path,
       markdown,
       error: "",
@@ -409,11 +409,11 @@ async function generateMarkdown(title, sourceText, noteLanguage, noteModel, sign
   return normalizeMarkdownTitle(content, title);
 }
 
-function saveMarkdown(title, folder, markdown) {
+function saveMarkdown(title, folder, folderPath, markdown) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendNativeMessage(
       CONFIG.nativeHostName,
-      { action: "saveNote", title, folder, markdown },
+      { action: "saveNote", title, folder, folderPath, markdown },
       (response) => {
         const error = chrome.runtime.lastError;
 

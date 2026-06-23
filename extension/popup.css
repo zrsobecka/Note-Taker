@@ -153,6 +153,19 @@ select:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.folderControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.folderControl .secondaryButton {
+  min-height: 40px;
+  padding-inline: 12px;
+  color: var(--accent-strong);
+}
+
 button {
   min-height: 40px;
   padding: 8px 12px;
