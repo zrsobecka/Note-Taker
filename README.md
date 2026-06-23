@@ -1,8 +1,8 @@
 # Note Taker
 
-Turn browser content into high-quality Obsidian notes using a local LLM.
+Turn browser content into high-quality Markdown notes using a local LLM.
 
-Note Taker is a Windows Chrome extension that captures text from a webpage, sends it to a local model running in LM Studio, and saves the generated Markdown note directly into your Obsidian vault.
+Note Taker is a Windows Chrome extension that captures text from a webpage, sends it to a local model running in LM Studio, and saves the generated Markdown note directly into a local folder you choose. That folder can be an Obsidian vault, but Obsidian is not required.
 
 The important difference: this is built around local AI. Your source material can stay on your own machine, you choose the model, and no cloud API key is required.
 
@@ -19,7 +19,7 @@ That can be convenient, but it usually means your source material leaves your co
 Note Taker uses a local-first flow instead:
 
 ```text
-Website -> Chrome extension -> LM Studio on localhost -> Markdown -> Obsidian vault
+Website -> Chrome extension -> LM Studio on localhost -> Markdown -> local notes folder
 ```
 
 This gives you:
@@ -27,7 +27,7 @@ This gives you:
 - local-first privacy for sensitive reading and research;
 - no required cloud API subscription;
 - control over which model generates your notes;
-- direct saving into your own Obsidian vault;
+- direct saving into your own local notes folder;
 - prompt rules you can inspect and customize.
 
 ## What Makes It Different
@@ -62,7 +62,7 @@ The prompt rules ask the model to:
 - remove website clutter such as navigation, banners, forms, and repeated UI text;
 - explain the material clearly enough that the note remains useful later;
 - write in the language selected for that specific note;
-- save the output as clean Markdown for Obsidian.
+- save the output as clean Markdown.
 
 The note-generation rules live in:
 
@@ -75,11 +75,11 @@ docs/note-generation-rules.md
 1. Open a webpage.
 2. Select text, copy text, or choose full-page capture.
 3. Open Note Taker.
-4. Enter a title, Obsidian folder, note language, and LM Studio model.
+4. Enter a title, choose a local save folder, note language, and LM Studio model.
 5. Add the note to the queue.
 6. The queue monitor sends the source text to LM Studio.
 7. The local model generates structured Markdown.
-8. The native host saves the Markdown file inside your configured Obsidian vault.
+8. The native host saves the Markdown file inside your selected local notes folder.
 
 Supported text sources:
 
@@ -95,7 +95,7 @@ Supported text sources:
 - Python 3.10+
 - LM Studio
 - At least one model downloaded in LM Studio
-- Obsidian vault
+- Local folder for generated Markdown notes
 
 ## Before Installing
 
@@ -114,17 +114,31 @@ Do this before using the extension, because Note Taker reads the available model
 3. Enable Developer mode.
 4. Choose **Load unpacked** and select the local `extension/` folder.
 5. Copy the generated Chrome extension ID.
-6. Copy the native host config example:
+6. Run the PowerShell installer from the repository root:
 
 ```powershell
-Copy-Item native-host\config.example.json native-host\config.json
+.\scripts\install_extension.ps1 -ExtensionId YOUR_EXTENSION_ID -DefaultSaveFolder "C:\Path\To\Your\Notes"
 ```
 
-7. Edit `native-host\config.json` and set `vault_path` to your local Obsidian vault:
+You can also run the root launcher, which opens the installer through PowerShell 7 when available:
+
+```powershell
+.\install.ps1 -ExtensionId YOUR_EXTENSION_ID -DefaultSaveFolder "C:\Path\To\Your\Notes"
+```
+
+If you have not loaded the extension yet, run:
+
+```powershell
+.\install.ps1 -OpenChromeExtensions
+```
+
+Then load the `extension/` folder in Chrome, copy the extension ID, and run the installer again with `-ExtensionId`.
+
+The installer creates `native-host\config.json` when needed. The main setting is `default_save_folder`:
 
 ```json
 {
-  "vault_path": "C:\\Path\\To\\Your\\ObsidianVault",
+  "default_save_folder": "C:\\Path\\To\\Your\\Notes",
   "excluded_folders": [
     "docs/superpowers"
   ],
@@ -132,7 +146,9 @@ Copy-Item native-host\config.example.json native-host\config.json
 }
 ```
 
-8. Register the native host:
+The native host can still save into an Obsidian vault if you choose your vault or one of its folders as the save folder.
+
+Manual native host registration is still available:
 
 ```powershell
 cd "C:\Path\To\Note Taker\native-host"
@@ -144,7 +160,7 @@ The installer creates a local `native-host\chrome_note_clipper_host.json` from t
 ## Configuration
 
 - `extension/config.js` - LM Studio URL, default model, native host name, source character limit.
-- `native-host/config.example.json` - safe template for local vault settings.
+- `native-host/config.example.json` - safe template for local save-folder settings.
 - `native-host/chrome_note_clipper_host.example.json` - safe template for Chrome Native Messaging.
 - `docs/note-generation-rules.md` - human-readable note rules.
 
@@ -169,7 +185,7 @@ The Chrome extension requests:
 By default:
 
 - browser source text is sent to LM Studio on `localhost`;
-- generated Markdown is written to the configured local Obsidian vault;
+- generated Markdown is written to the selected local save folder;
 - queue state, selected model, selected language, and recent UI settings are stored in Chrome extension storage;
 - the native host writes a local log file at `native-host/native-host.log`;
 - no external AI API key is required.
@@ -178,7 +194,7 @@ By default:
 
 ```text
 extension/     Chrome popup, queue monitor, source extraction, LM Studio requests
-native-host/   Python Native Messaging host that writes notes to Obsidian
+native-host/   Python Native Messaging host that writes notes to a local folder
 docs/          Note-generation rules and product documentation
 tools/         Utility scripts
 ```
@@ -201,6 +217,7 @@ JavaScript syntax checks:
 
 ```powershell
 node --check extension\popup.js
+node --check extension\folder_picker.js
 node --check extension\queue.js
 node --check extension\service_worker.js
 ```
@@ -209,6 +226,7 @@ Python syntax checks:
 
 ```powershell
 python -m py_compile native-host\install_native_host.py native-host\chrome_note_clipper_host.py
+python -m unittest native-host\test_folder_selection.py
 ```
 
 ## Development Notes

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Obsidian Note Taker",
-  "description": "Turn selected or copied text into clean Obsidian notes with a local LM Studio model.",
+  "name": "Note Taker",
+  "description": "Turn selected or copied text into clean Markdown notes with a local LM Studio model.",
   "version": "0.1.0",
   "icons": {
     "16": "icons/icon-16.png",
@@ -17,7 +17,7 @@
       "128": "icons/icon-128.png"
     },
     "default_popup": "popup.html",
-    "default_title": "Obsidian Note Taker"
+    "default_title": "Note Taker"
   },
   "background": {
     "service_worker": "service_worker.js",

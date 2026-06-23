@@ -26,6 +26,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message?.action === "chooseFolder") {
+    chooseFolder()
+      .then(sendResponse)
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+
+    return true;
+  }
+
   if (message?.action !== "generateAndSaveNote") {
     return false;
   }
@@ -58,14 +66,14 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
-async function generateAndSaveNote({ title, folder, sourceText, noteLanguage, noteModel }) {
+async function generateAndSaveNote({ title, folder, folderPath, sourceText, noteLanguage, noteModel }) {
   const markdown = await generateMarkdown(
     title,
     sourceText,
     noteLanguage || "polski",
     noteModel || CONFIG.lmStudioModel
   );
-  const saved = await saveMarkdown(title, folder, markdown);
+  const saved = await saveMarkdown(title, folder, folderPath, markdown);
 
   return {
     ok: true,
@@ -108,6 +116,7 @@ function startNoteJob(port, jobs, jobInput) {
     id: jobInput.id,
     title: jobInput.title,
     folder: jobInput.folder,
+    folderPath: jobInput.folderPath || jobInput.folder || "",
     noteLanguage: jobInput.noteLanguage || "polski",
     noteModel: jobInput.noteModel || CONFIG.lmStudioModel,
     sourceText: jobInput.sourceText,
@@ -156,10 +165,10 @@ async function runNoteJob(port, jobs, job) {
       throw new DOMException("Note generation was stopped.", "AbortError");
     }
 
-    setJobStatus(port, jobs, job.id, "saving", "Saving note to Obsidian.");
-    const saved = await saveMarkdown(job.title, job.folder, markdown);
+    setJobStatus(port, jobs, job.id, "saving", "Saving note.");
+    const saved = await saveMarkdown(job.title, job.folder, job.folderPath, markdown);
 
-    setJobStatus(port, jobs, job.id, "saved", "Saved to Obsidian.", {
+    setJobStatus(port, jobs, job.id, "saved", "Saved.", {
       markdown,
       path: saved.path
     });
@@ -205,7 +214,7 @@ function cancelNoteJob(port, jobs, id) {
   }
 
   if (job.status === "saving") {
-    setJobStatus(port, jobs, id, "saving", "Already saving to Obsidian.");
+    setJobStatus(port, jobs, id, "saving", "Already saving this note.");
     return;
   }
 
@@ -311,6 +320,7 @@ function toStoredJob(job) {
     id: job.id,
     title: job.title,
     folder: job.folder,
+    folderPath: job.folderPath || job.folder || "",
     noteLanguage: getNoteLanguage(job),
     noteModel: getNoteModel(job),
     sourceText: TERMINAL_STATUSES.has(job.status) ? "" : job.sourceText,
@@ -329,6 +339,7 @@ function toJobResponse(job) {
     id: job.id,
     title: job.title,
     folder: job.folder,
+    folderPath: job.folderPath || job.folder || "",
     noteLanguage: getNoteLanguage(job),
     noteModel: getNoteModel(job),
     status: job.status,
@@ -530,11 +541,35 @@ function listFolders() {
   });
 }
 
-function saveMarkdown(title, folder, markdown) {
+function chooseFolder() {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendNativeMessage(
       CONFIG.nativeHostName,
-      { action: "saveNote", title, folder, markdown },
+      { action: "chooseFolder" },
+      (response) => {
+        const error = chrome.runtime.lastError;
+
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+
+        if (!response?.ok) {
+          reject(new Error(response?.error || "Native host failed."));
+          return;
+        }
+
+        resolve(response);
+      }
+    );
+  });
+}
+
+function saveMarkdown(title, folder, folderPath, markdown) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendNativeMessage(
+      CONFIG.nativeHostName,
+      { action: "saveNote", title, folder, folderPath, markdown },
       (response) => {
         const error = chrome.runtime.lastError;
 

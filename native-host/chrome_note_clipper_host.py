@@ -93,7 +93,11 @@ def unique_path(folder, base_name):
 
 
 def resolve_vault_path(config):
-    return Path(config["vault_path"]).expanduser().resolve()
+    vault_path = config.get("vault_path")
+    if not vault_path:
+        raise ValueError("Vault path is not configured.")
+
+    return Path(vault_path).expanduser().resolve()
 
 
 def normalize_folder(folder):
@@ -112,7 +116,46 @@ def is_excluded_folder(relative_folder, excluded_folders):
     return False
 
 
-def resolve_target_folder(config, folder):
+def resolve_configured_save_folder(config):
+    save_folder = config.get("default_save_folder") or config.get("save_folder")
+    if save_folder:
+        return Path(save_folder).expanduser().resolve()
+
+    if config.get("vault_path"):
+        return resolve_vault_path(config)
+
+    raise ValueError("Choose a save folder first.")
+
+
+def resolve_initial_folder(config):
+    try:
+        initial_path = resolve_configured_save_folder(config)
+    except ValueError:
+        return Path.home().resolve()
+
+    if not initial_path.exists():
+        return Path.home().resolve()
+
+    return initial_path
+
+
+def resolve_local_folder(folder_path):
+    selected_path = Path(folder_path).expanduser().resolve()
+    selected_path.mkdir(parents=True, exist_ok=True)
+
+    if not selected_path.is_dir():
+        raise ValueError("Selected path is not a folder.")
+
+    return selected_path
+
+
+def resolve_target_folder(config, folder="", folder_path=""):
+    if folder_path:
+        return resolve_local_folder(folder_path)
+
+    if config.get("default_save_folder") or config.get("save_folder"):
+        return resolve_local_folder(resolve_configured_save_folder(config))
+
     vault_path = resolve_vault_path(config)
     selected_folder = normalize_folder(folder)
     target_folder = (vault_path / selected_folder).resolve() if selected_folder else vault_path
@@ -123,9 +166,8 @@ def resolve_target_folder(config, folder):
     target_folder.mkdir(parents=True, exist_ok=True)
     return target_folder
 
-
-def build_note_path(config, title, folder):
-    target_folder = resolve_target_folder(config, folder)
+def build_note_path(config, title, folder="", folder_path=""):
+    target_folder = resolve_target_folder(config, folder, folder_path)
     base_name = safe_filename(title)
     if config.get("filename_date_prefix", True):
         base_name = f"{datetime.now().strftime('%Y-%m-%d')} {base_name}"
@@ -135,6 +177,9 @@ def build_note_path(config, title, folder):
 
 def list_folders(_payload):
     config = load_config()
+    if not config.get("vault_path"):
+        return {"ok": True, "folders": []}
+
     vault_path = resolve_vault_path(config)
 
     if not vault_path.exists():
@@ -162,16 +207,53 @@ def list_folders(_payload):
     }
 
 
+def choose_folder(_payload):
+    config = load_config()
+    initial_path = resolve_initial_folder(config)
+
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+    except ImportError as error:
+        raise ValueError("Folder picker is not available in this Python installation.") from error
+
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+
+    try:
+        selected_folder = filedialog.askdirectory(
+            parent=root,
+            title="Choose note save folder",
+            initialdir=str(initial_path),
+            mustexist=True,
+        )
+    finally:
+        root.destroy()
+
+    if not selected_folder:
+        return {"ok": True, "cancelled": True, "folderPath": "", "folder": ""}
+
+    selected_path = resolve_local_folder(selected_folder)
+    return {
+        "ok": True,
+        "cancelled": False,
+        "folderPath": str(selected_path),
+        "folder": str(selected_path),
+    }
+
+
 def save_note(payload):
     config = load_config()
     title = payload.get("title", "Untitled note")
     folder = payload.get("folder", "")
+    folder_path = payload.get("folderPath", "")
     markdown = payload.get("markdown", "").strip()
 
     if not markdown:
         raise ValueError("Markdown content is empty.")
 
-    path = build_note_path(config, title, folder)
+    path = build_note_path(config, title, folder, folder_path)
     path.write_text(markdown + "\n", encoding="utf-8")
     log_event(f"Saved note: {path}")
 
@@ -183,6 +265,9 @@ def handle_message(message):
 
     if action == "listFolders":
         return list_folders(message)
+
+    if action == "chooseFolder":
+        return choose_folder(message)
 
     if action == "saveNote":
         return save_note(message)
